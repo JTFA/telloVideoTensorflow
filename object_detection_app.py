@@ -5,11 +5,13 @@ import argparse
 import multiprocessing
 import numpy as np
 import tensorflow as tf
+import threading
 
 from utils.app_utils import FPS, WebcamVideoStream, HLSVideoStream
 from multiprocessing import Queue, Pool
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
+from tello import Tello
 
 CWD_PATH = os.getcwd()
 
@@ -28,6 +30,55 @@ categories = label_map_util.convert_label_map_to_categories(label_map, max_num_c
                                                             use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
 
+receiving = False
+
+def telloControllerThread():
+    tello = Tello('', 8889)
+    north = 0
+    west = 0
+    south = 0
+    east = 0
+    landing = False
+    while not receiving:
+        pass
+    try:
+        tello.takeoff()
+    except Exception:
+        print("error occured taking off")
+    while True:
+        print("height")
+        print(tello.get_height())
+        if tello.get_height()<1 and not landing:
+            resp = tello.move_up(0.2)
+            print("response for moving up")
+            print(resp)
+        if north < 1:
+            print("moving forward")
+            resp = tello.move_forward(0.2)
+            print("response for moving forward")
+            print(resp)
+            north = north + 0.2
+        elif west < 1:
+            print("moving left")
+            resp = tello.move_left(0.2)
+            print("response for moving left")
+            print(resp)
+            west = west + 0.2
+        elif south < 1:
+            print("moving backward")
+            resp = tello.move_backward(0.2)
+            print("response for moving backward")
+            print(resp)
+            south = south + 0.2
+        elif east < 1:
+            print("moving right")
+            resp = tello.move_right(0.2)
+            print("response for moving east")
+            print(resp)
+            east = east + 0.2
+        else:
+            landing = True
+            tello.land()
 
 def detect_objects(image_np, sess, detection_graph):
     # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -98,6 +149,11 @@ if __name__ == '__main__':
                         default=5, help='Size of the queue.')
     args = parser.parse_args()
 
+    receive_thread = threading.Thread(target=telloControllerThread)
+    receive_thread.daemon = True
+
+    receive_thread.start()
+
     logger = multiprocessing.log_to_stderr()
     logger.setLevel(multiprocessing.SUBDEBUG)
 
@@ -119,6 +175,7 @@ if __name__ == '__main__':
     fps = FPS().start()
 
     while True:  # fps._numFrames < 120
+        receiving = True
         frame = video_capture.read()
         input_q.put(frame)
 

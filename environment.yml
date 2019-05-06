@@ -1,4 +1,4 @@
-name: object-detection
+name: object-detection2
 channels: !!python/tuple
 - menpo
 - defaults
@@ -45,5 +45,4 @@ dependencies:
   - tensorflow==1.2.0
   - werkzeug==0.12.2
   - scipy
-prefix: /Users/datitran/anaconda/envs/object-detection
 
